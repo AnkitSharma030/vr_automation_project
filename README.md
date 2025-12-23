@@ -29,7 +29,47 @@ A full-stack Next.js application that processes lead names through the Nationali
 
 
 
-## 📐 Architecture Overview
+## �️ Setup Instructions
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/AnkitSharma030/vr_automation_project.git
+cd vr_automation_test1
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Set Up Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+# MongoDB Connection
+MONGODB_URI=your_mongodb_connection_string
+```
+
+**Getting MongoDB URI:**
+- Sign up for free at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+- Create a cluster
+- Click "Connect" → "Connect your application"
+- Copy the connection string and replace `<password>` with your database password
+
+### 4. Run the Development Server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+The background sync will automatically start running in the background as long as the dashboard tab is open.
+
+## �📐 Architecture Overview
 
 ### Batch API Request Handling
 
