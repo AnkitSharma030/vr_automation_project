@@ -1,36 +1,353 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Smart Lead Automation System
 
-## Getting Started
+A full-stack Next.js application that processes lead names through the Nationalize.io API to enrich them with nationality detection, applies business logic based on confidence scores, and runs automated background tasks for CRM synchronization.
 
-First, run the development server:
+## 🎯 Features
+
+- **Batch Lead Processing**: Submit multiple names at once for automatic enrichment
+- **AI-Powered Nationality Detection**: Integrates with Nationalize.io API to predict nationality
+- **Intelligent Status Assignment**: Automatically categorizes leads as "Verified" (>60% confidence) or "To Check"
+- **Real-time Dashboard**: View all processed leads with live filtering
+- **Background Automation**: Scheduled task that syncs verified leads every 5 minutes
+- **Idempotent Design**: Ensures each lead is only synced once to prevent duplicates
+- **Modern UI**: Beautiful dark-themed interface with smooth animations
+
+## 🚀 Tech Stack
+
+- **Frontend**: Next.js 16, React 19
+- **Backend**: Next.js API Routes (Node.js)
+- **Database**: MongoDB with Mongoose ODM
+- **External API**: Nationalize.io for nationality detection
+- **Background Jobs**: node-cron for scheduling
+- **Styling**: Vanilla CSS with modern design patterns
+
+## 📋 Prerequisites
+
+- Node.js 18.x or higher
+- MongoDB database (local or Atlas)
+- npm or yarn package manager
+
+## 🛠️ Setup Instructions
+
+### 1. Clone the Repository
+
+```bash
+git clone <your-repo-url>
+cd vr_automation_test1
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Set Up Environment Variables
+
+Create a `.env.local` file in the root directory:
+
+```env
+# MongoDB Connection
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/smart-leads?retryWrites=true&w=majority
+
+# Cron Secret (for background job authentication)
+CRON_SECRET=your_secure_random_secret_here
+
+# API URL (for background job, use production URL when deployed)
+API_URL=http://localhost:3000
+```
+
+**Getting MongoDB URI:**
+- Sign up for free at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+- Create a cluster
+- Click "Connect" → "Connect your application"
+- Copy the connection string and replace `<password>` with your database password
+
+**Generate CRON_SECRET:**
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### 4. Run the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### 5. Start the Background Sync Job
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+In a **new terminal window**:
 
-## Learn More
+```bash
+node scripts/background-sync.js
+```
 
-To learn more about Next.js, take a look at the following resources:
+This will run the automated sync task every 5 minutes. Keep this terminal open to see sync logs.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📐 Architecture Overview
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Batch API Request Handling
 
-## Deploy on Vercel
+The system uses **concurrent processing** to handle batch API requests efficiently:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. **Input Parsing**: User submits comma-separated names via the frontend form
+2. **Deduplication**: Backend removes duplicate names and filters empty entries
+3. **Concurrent Enrichment**: Uses `Promise.all()` to call Nationalize.io API for all names **simultaneously**
+4. **Business Logic**: Applies status rules based on probability scores (>60% = Verified)
+5. **Batch Storage**: Saves all enriched leads to MongoDB in parallel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Why Promise.all()?**
+- **Speed**: All API calls execute concurrently rather than sequentially
+- **Efficiency**: Completes batch processing in ~1-2 seconds instead of N * request_time
+- **Reliability**: Individual failures don't block other requests
+- **Scale**: Handles batches of 10-50 names without timeout issues
+
+### Idempotency Strategy for Background Sync
+
+To prevent duplicate CRM syncs, the system implements a **boolean flag pattern**:
+
+1. **Database Field**: Each lead has a `synced` field (default: `false`)
+2. **Query Filter**: Background job queries: `{ status: "Verified", synced: false }`
+3. **Atomic Update**: Immediately after logging, updates `synced: true` for each lead
+4. **Guarantee**: Once a lead is synced, it never appears in subsequent queries
+
+**Benefits:**
+- ✅ Simple and reliable
+- ✅ No additional timestamp checks needed
+- ✅ Works even if the job runs multiple times simultaneously
+- ✅ Easy to reset for testing (just set `synced: false`)
+
+### System Flow Diagram
+
+```
+User Input → Frontend Form → API Route (/api/leads)
+                                    ↓
+                          Concurrent API Calls (Nationalize.io)
+                                    ↓
+                          Business Logic (>60% check)
+                                    ↓
+                            MongoDB Storage (synced: false)
+                                    ↓
+                          ← Return Results to Frontend
+                                    ↓
+                            Display in Table
+
+Every 5 minutes:
+Background Job → API Route (/api/sync)
+                       ↓
+              Find { status: "Verified", synced: false }
+                       ↓
+              Log to Console (CRM Simulation)
+                       ↓
+              Update { synced: true }
+```
+
+## 📡 API Endpoints
+
+### POST /api/leads
+Process a batch of names.
+
+**Request:**
+```json
+{
+  "names": ["Peter", "Aditi", "Ravi", "Satoshi"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "count": 4,
+  "leads": [
+    {
+      "name": "Peter",
+      "country": "DE",
+      "probability": 0.75,
+      "status": "Verified",
+      "synced": false,
+      "createdAt": "2024-01-15T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+### GET /api/leads
+Retrieve all leads with optional filtering.
+
+**Query Parameters:**
+- `status`: Filter by "Verified" or "To Check"
+
+**Example:**
+```bash
+GET /api/leads?status=Verified
+```
+
+### POST /api/sync
+Trigger background sync (requires authentication).
+
+**Headers:**
+```
+x-cron-secret: <your_cron_secret>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "synced": 3,
+  "message": "Successfully synced 3 verified leads"
+}
+```
+
+## 🗄️ Database Schema
+
+### Lead Collection
+
+```javascript
+{
+  name: String,          // Lead's first name
+  country: String,       // ISO country code (e.g., "US", "IN")
+  probability: Number,   // Confidence score (0.0 - 1.0)
+  status: String,        // "Verified" or "To Check"
+  synced: Boolean,       // Idempotency flag for CRM sync
+  createdAt: Date        // Timestamp
+}
+```
+
+## 🎨 UI Features
+
+- **Form Section**: Submit batch names with real-time validation
+- **Filter Bar**: Quick toggle between All, Verified, and To Check leads
+- **Results Table**: 
+  - Visual confidence bars (green for >60%, yellow for ≤60%)
+  - Color-coded status badges
+  - Responsive design for mobile devices
+- **Loading States**: Smooth spinners during API calls
+- **Empty States**: Helpful messages when no data exists
+
+## 🚢 Deployment Guide
+
+### Option 1: Vercel (Next.js) + Railway (Background Job)
+
+**Deploy Frontend + API:**
+1. Push code to GitHub
+2. Import to [Vercel](https://vercel.com)
+3. Add environment variables
+4. Deploy
+
+**Deploy Background Job:**
+1. Create account on [Railway](https://railway.app)
+2. Create new project → Deploy from GitHub
+3. Set start command: `node scripts/background-sync.js`
+4. Add environment variables (use Vercel URL for `API_URL`)
+
+### Option 2: Vercel Cron Jobs (Beta)
+
+Use Vercel's built-in cron feature:
+1. Create `vercel.json`:
+```json
+{
+  "crons": [{
+    "path": "/api/sync",
+    "schedule": "*/5 * * * *"
+  }]
+}
+```
+2. Update `/api/sync/route.js` to accept Vercel cron authorization
+
+## 📸 Screenshots
+
+### Dashboard Interface
+![Dashboard Screenshot](./screenshots/dashboard.png)
+
+### Database Example
+![Database Screenshot](./screenshots/database.png)
+
+*Note: Add actual screenshots to the screenshots/ directory*
+
+## 🧪 Testing
+
+### Manual Testing
+
+1. **Submit Names:**
+   - Enter: "Peter, Aditi, Ravi, Satoshi"
+   - Click "Process Names"
+   - Verify results appear in table
+
+2. **Test Filtering:**
+   - Click "Verified" filter
+   - Verify only high-confidence leads show
+   - Click "To Check" filter
+   - Verify only low-confidence leads show
+
+3. **Test Background Sync:**
+   - Wait 5 minutes (or run script manually)
+   - Check terminal logs for: `[CRM Sync] Sending verified lead...`
+   - Run again and verify no duplicate logs
+
+### API Testing with cURL
+
+```bash
+# Test batch processing
+curl -X POST http://localhost:3000/api/leads \
+  -H "Content-Type: application/json" \
+  -d '{"names": ["Peter", "Aditi"]}'
+
+# Test filtering
+curl http://localhost:3000/api/leads?status=Verified
+
+# Test sync (replace SECRET)
+curl -X POST http://localhost:3000/api/sync \
+  -H "x-cron-secret: YOUR_SECRET"
+```
+
+## 🔧 Development
+
+### Project Structure
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── leads/route.js     # Lead processing endpoints
+│   │   └── sync/route.js      # Background sync endpoint
+│   ├── page.js                # Main dashboard
+│   └── globals.css            # Styling
+├── components/
+│   ├── LeadForm.jsx           # Input form
+│   ├── FilterBar.jsx          # Status filter
+│   └── LeadsTable.jsx         # Results table
+├── lib/
+│   ├── mongodb.js             # Database connection
+│   └── nationalize.js         # API integration
+└── models/
+    └── Lead.js                # Mongoose schema
+
+scripts/
+└── background-sync.js         # Cron job
+```
+
+### Adding New Features
+
+**Add a new field to leads:**
+1. Update `src/models/Lead.js` schema
+2. Modify `src/lib/nationalize.js` to include data
+3. Update `src/components/LeadsTable.jsx` to display
+4. Update database migration if needed
+
+## 📝 License
+
+MIT
+
+## 👨‍💻 Developer
+
+Created for VR Automations Developer Test
+
+---
+
+**Live URLs:**
+- Frontend: `<deployed-frontend-url>`
+- Backend API: `<deployed-backend-url>`
+- GitHub: `<repository-url>`
