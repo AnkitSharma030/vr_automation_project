@@ -1,7 +1,14 @@
 import cron from 'node-cron';
 import axios from 'axios';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 // Configuration
+console.log("CRON_SECRET", process.env.CRON_SECRET);
+console.log("API_URL", process.env.API_URL);
+
 const API_URL = process.env.API_URL || 'http://localhost:3000';
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -44,7 +51,7 @@ async function executeSyncTask() {
 
 // Schedule the task to run every 5 minutes
 // Cron expression: */5 * * * * (every 5 minutes)
-cron.schedule('*/5 * * * *', executeSyncTask, {
+cron.schedule('* * * * *', executeSyncTask, {
     scheduled: true,
     timezone: 'UTC',
 });

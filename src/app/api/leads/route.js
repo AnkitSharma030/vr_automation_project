@@ -21,14 +21,14 @@ export async function POST(request) {
         await connectDB();
 
         // Process names through Nationalize.io API (concurrent)
-        const enrichedData = await processBatch(names);
+        const namesData = await processBatch(names);
 
         // Apply business logic and save to database
         const leads = await Promise.all(
-            enrichedData.map(async (data) => {
+            namesData.map(async (data) => {
                 // Rule: probability > 0.6 = "Verified", otherwise "To Check"
                 const status = data.probability > 0.6 ? 'Verified' : 'To Check';
-
+                
                 const lead = new Lead({
                     name: data.name,
                     country: data.country,

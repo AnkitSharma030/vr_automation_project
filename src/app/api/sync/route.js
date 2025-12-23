@@ -2,8 +2,17 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Lead from '@/models/Lead';
 
-// POST: Sync verified leads (called by background job)
+// POST: Sync verified leads (called by background job or manually)
 export async function POST(request) {
+    return handleSync(request);
+}
+
+// GET: Sync verified leads (called by Vercel Cron)
+export async function GET(request) {
+    return handleSync(request);
+}
+
+async function handleSync(request) {
     try {
         // Verify cron secret for security
         const authHeader = request.headers.get('x-cron-secret');
@@ -27,6 +36,7 @@ export async function POST(request) {
         // Simulate CRM sync by logging to console
         let syncCount = 0;
         for (const lead of leadsToSync) {
+
             console.log(`[CRM Sync] Sending verified lead ${lead.name} to Sales Team...`);
 
             // Update synced status to ensure idempotency

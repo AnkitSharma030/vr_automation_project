@@ -2,11 +2,6 @@ import axios from 'axios';
 
 const NATIONALIZE_API_URL = 'https://api.nationalize.io';
 
-/**
- * Enriches a single name with nationality data from Nationalize.io API
- * @param {string} name - The name to enrich
- * @returns {Promise<Object>} - Object containing country and probability
- */
 async function enrichName(name) {
     try {
         const response = await axios.get(NATIONALIZE_API_URL, {
@@ -39,11 +34,7 @@ async function enrichName(name) {
     }
 }
 
-/**
- * Process multiple names concurrently using Nationalize.io API
- * @param {Array<string>} names - Array of names to process
- * @returns {Promise<Array<Object>>} - Array of enriched results
- */
+
 export async function processBatch(names) {
     // Remove duplicates and filter empty names
     const uniqueNames = [...new Set(names.filter(name => name && name.trim()))];

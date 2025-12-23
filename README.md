@@ -230,33 +230,24 @@ x-cron-secret: <your_cron_secret>
 
 ## 🚢 Deployment Guide
 
-### Option 1: Vercel (Next.js) + Railway (Background Job)
+### Deployment Method: Vercel (Recommended)
 
-**Deploy Frontend + API:**
-1. Push code to GitHub
-2. Import to [Vercel](https://vercel.com)
-3. Add environment variables
-4. Deploy
+This project is configured to use **Vercel Cron Jobs** for background synchronization.
 
-**Deploy Background Job:**
-1. Create account on [Railway](https://railway.app)
-2. Create new project → Deploy from GitHub
-3. Set start command: `node scripts/background-sync.js`
-4. Add environment variables (use Vercel URL for `API_URL`)
+1. **Deploy to Vercel**: Import your repository to Vercel.
+2. **Environment Variables**: Add your `MONGODB_URI` and `CRON_SECRET` to Vercel project settings.
+3. **Automatic Configuration**: The included `vercel.json` file automatically schedules the `/api/sync` endpoint to be called every 5 minutes.
+   - **Note**: You do **NOT** need to run any background script on Vercel. The platform handles it.
 
-### Option 2: Vercel Cron Jobs (Beta)
+### Alternative: Manual/Local Sync
 
-Use Vercel's built-in cron feature:
-1. Create `vercel.json`:
-```json
-{
-  "crons": [{
-    "path": "/api/sync",
-    "schedule": "*/5 * * * *"
-  }]
-}
-```
-2. Update `/api/sync/route.js` to accept Vercel cron authorization
+If you are running locally or on a VPS/server without serverless cron:
+
+1. Use the included script:
+   ```bash
+   npm run sync
+   ```
+2. Or use a service like Railway/Render to run `node scripts/background-sync.js` as a worker service.
 
 ## 📸 Screenshots
 
