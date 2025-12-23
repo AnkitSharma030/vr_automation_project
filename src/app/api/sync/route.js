@@ -14,17 +14,6 @@ export async function GET(request) {
 
 async function handleSync(request) {
     try {
-        // Verify cron secret for security
-        const authHeader = request.headers.get('x-cron-secret');
-        const cronSecret = process.env.CRON_SECRET;
-
-        if (!cronSecret || authHeader !== cronSecret) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
         await connectDB();
 
         // Find all verified leads that haven't been synced yet
@@ -33,7 +22,7 @@ async function handleSync(request) {
             synced: false,
         });
 
-        // Simulate CRM sync by logging to console
+        // Simulate CRM sync
         let syncCount = 0;
         for (const lead of leadsToSync) {
 

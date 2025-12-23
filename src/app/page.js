@@ -51,6 +51,25 @@ export default function Home() {
 
   useEffect(() => {
     fetchLeads();
+
+    // Background sync polling (every 5 minutes)
+    const syncInterval = setInterval(async () => {
+      try {
+        console.log('🔄 Running background sync...');
+        const response = await fetch('/api/sync', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success && data.synced > 0) {
+          console.log(`✅ Synced ${data.synced} leads`);
+          // Refresh leads list if new leads were synced
+          fetchLeads();
+        }
+      } catch (error) {
+        console.error('Background sync failed:', error);
+      }
+    }, 2 * 60 * 1000); // 2 minutes
+
+    return () => clearInterval(syncInterval);
   }, []);
 
   return (

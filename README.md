@@ -24,67 +24,10 @@ A full-stack Next.js application that processes lead names through the Nationali
 ## 📋 Prerequisites
 
 - Node.js 18.x or higher
-- MongoDB database (local or Atlas)
-- npm or yarn package manager
+- MongoDB database (Atlas)
+- npm package manager
 
-## 🛠️ Setup Instructions
 
-### 1. Clone the Repository
-
-```bash
-git clone <your-repo-url>
-cd vr_automation_test1
-```
-
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-### 3. Set Up Environment Variables
-
-Create a `.env.local` file in the root directory:
-
-```env
-# MongoDB Connection
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/smart-leads?retryWrites=true&w=majority
-
-# Cron Secret (for background job authentication)
-CRON_SECRET=your_secure_random_secret_here
-
-# API URL (for background job, use production URL when deployed)
-API_URL=http://localhost:3000
-```
-
-**Getting MongoDB URI:**
-- Sign up for free at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-- Create a cluster
-- Click "Connect" → "Connect your application"
-- Copy the connection string and replace `<password>` with your database password
-
-**Generate CRON_SECRET:**
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-### 4. Run the Development Server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### 5. Start the Background Sync Job
-
-In a **new terminal window**:
-
-```bash
-node scripts/background-sync.js
-```
-
-This will run the automated sync task every 5 minutes. Keep this terminal open to see sync logs.
 
 ## 📐 Architecture Overview
 
@@ -116,7 +59,6 @@ To prevent duplicate CRM syncs, the system implements a **boolean flag pattern**
 **Benefits:**
 - ✅ Simple and reliable
 - ✅ No additional timestamp checks needed
-- ✅ Works even if the job runs multiple times simultaneously
 - ✅ Easy to reset for testing (just set `synced: false`)
 
 ### System Flow Diagram
@@ -185,23 +127,6 @@ Retrieve all leads with optional filtering.
 GET /api/leads?status=Verified
 ```
 
-### POST /api/sync
-Trigger background sync (requires authentication).
-
-**Headers:**
-```
-x-cron-secret: <your_cron_secret>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "synced": 3,
-  "message": "Successfully synced 3 verified leads"
-}
-```
-
 ## 🗄️ Database Schema
 
 ### Lead Collection
@@ -228,37 +153,6 @@ x-cron-secret: <your_cron_secret>
 - **Loading States**: Smooth spinners during API calls
 - **Empty States**: Helpful messages when no data exists
 
-## 🚢 Deployment Guide
-
-### Deployment Method: Vercel (Recommended)
-
-This project is configured to use **Vercel Cron Jobs** for background synchronization.
-
-1. **Deploy to Vercel**: Import your repository to Vercel.
-2. **Environment Variables**: Add your `MONGODB_URI` and `CRON_SECRET` to Vercel project settings.
-3. **Automatic Configuration**: The included `vercel.json` file automatically schedules the `/api/sync` endpoint to be called every 5 minutes.
-   - **Note**: You do **NOT** need to run any background script on Vercel. The platform handles it.
-
-### Alternative: Manual/Local Sync
-
-If you are running locally or on a VPS/server without serverless cron:
-
-1. Use the included script:
-   ```bash
-   npm run sync
-   ```
-2. Or use a service like Railway/Render to run `node scripts/background-sync.js` as a worker service.
-
-## 📸 Screenshots
-
-### Dashboard Interface
-![Dashboard Screenshot](./screenshots/dashboard.png)
-
-### Database Example
-![Database Screenshot](./screenshots/database.png)
-
-*Note: Add actual screenshots to the screenshots/ directory*
-
 ## 🧪 Testing
 
 ### Manual Testing
@@ -275,7 +169,7 @@ If you are running locally or on a VPS/server without serverless cron:
    - Verify only low-confidence leads show
 
 3. **Test Background Sync:**
-   - Wait 5 minutes (or run script manually)
+   - Wait 5 minutes 
    - Check terminal logs for: `[CRM Sync] Sending verified lead...`
    - Run again and verify no duplicate logs
 
@@ -290,10 +184,6 @@ curl -X POST http://localhost:3000/api/leads \
 # Test filtering
 curl http://localhost:3000/api/leads?status=Verified
 
-# Test sync (replace SECRET)
-curl -X POST http://localhost:3000/api/sync \
-  -H "x-cron-secret: YOUR_SECRET"
-```
 
 ## 🔧 Development
 
@@ -316,8 +206,6 @@ src/
 └── models/
     └── Lead.js                # Mongoose schema
 
-scripts/
-└── background-sync.js         # Cron job
 ```
 
 ### Adding New Features
@@ -328,17 +216,11 @@ scripts/
 3. Update `src/components/LeadsTable.jsx` to display
 4. Update database migration if needed
 
-## 📝 License
-
-MIT
-
-## 👨‍💻 Developer
 
 Created for VR Automations Developer Test
 
 ---
 
 **Live URLs:**
-- Frontend: `<deployed-frontend-url>`
-- Backend API: `<deployed-backend-url>`
-- GitHub: `<repository-url>`
+- Project Link: https://vr-automation-project.vercel.app/
+- GitHub: https://github.com/AnkitSharma030/vr_automation_project.git
