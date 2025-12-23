@@ -1,12 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function LeadForm({ onSuccess }) {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    useEffect(() => {
+        if (!error && !success) return;
+
+        const timer = setTimeout(() => {
+            setError('');
+            setSuccess('');
+        }, 5000);
+
+        return () => clearTimeout(timer);
+    }, [error, success]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
